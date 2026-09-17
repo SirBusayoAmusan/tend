@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #fbfaf6;
+  --color-cream: #f4f0e7;
+  --color-ink: #2e2a26;
+  --color-mist: #8a8378;
+  --color-line: #eae4d9;
+
+  --color-sage: #7fa98b;
+  --color-sage-soft: #e3efe6;
+  --color-sky: #7e9cc4;
+  --color-sky-soft: #e4ecf7;
+  --color-lilac: #9d92c7;
+  --color-lilac-soft: #ece9f6;
+  --color-clay: #c4836a;
+  --color-clay-soft: #f4e6dd;
+  --color-sand: #c7a96e;
+  --color-sand-soft: #f4edde;
+  --color-rose: #c98a8a;
+  --color-rose-soft: #f6e7e7;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Palatino", "Georgia", serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-sage-soft);
+}
+
+input[type='range'] {
+  accent-color: var(--color-sage);
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ---- Pip the mascot: animation set ---- */
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.mascot-float {
+  animation: floaty 3.4s ease-in-out infinite;
+}
+
+@keyframes hop {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-7px); }
+  50% { transform: translateY(0); }
+  65% { transform: translateY(-3px); }
+  80% { transform: translateY(0); }
+}
+.mascot-bounce {
+  animation: hop 1.7s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.12); }
+}
+.blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 4.8s infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(5deg); }
+}
+.sway {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: sway 3.2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-20deg); }
+}
+.arm-wave {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: wave 1.1s ease-in-out infinite;
+}
+
+@keyframes zfloat {
+  0% { opacity: 0; transform: translateY(5px); }
+  25% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-11px); }
+}
+.zz { animation: zfloat 2.6s linear infinite; }
+.zz2 { animation-delay: 0.85s; }
+.zz3 { animation-delay: 1.7s; }
+
+/* ---- Apple-Books-style page flip ---- */
+
+.flip-stage {
+  perspective: 1600px;
+  perspective-origin: 50% 50%;
+}
+.flip-leaf {
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+.flip-out-next {
+  transform-origin: left center;
+  animation: flipOutNext 0.18s ease-in forwards;
+}
+.flip-in-next {
+  transform-origin: left center;
+  animation: flipInNext 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.flip-out-prev {
+  transform-origin: right center;
+  animation: flipOutPrev 0.18s ease-in forwards;
+}
+.flip-in-prev {
+  transform-origin: right center;
+  animation: flipInPrev 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes flipOutNext {
+  to { transform: rotateY(-58deg); opacity: 0.25; filter: brightness(0.96); }
+}
+@keyframes flipInNext {
+  from { transform: rotateY(42deg); opacity: 0.2; }
+  to { transform: rotateY(0); opacity: 1; }
+}
+@keyframes flipOutPrev {
+  to { transform: rotateY(58deg); opacity: 0.25; filter: brightness(0.96); }
+}
+@keyframes flipInPrev {
+  from { transform: rotateY(-42deg); opacity: 0.2; }
+  to { transform: rotateY(0); opacity: 1; }
+}
+
+/* paper feel for the reader */
+.reader-paper {
+  background: linear-gradient(90deg, #f7f3ea 0%, #fdfcf8 12%, #fdfcf8 88%, #f7f3ea 100%);
+  box-shadow: inset 0 0 40px rgba(46, 42, 38, 0.05), 0 10px 30px rgba(46, 42, 38, 0.08);
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise-in { animation: riseIn 0.35s ease-out both; }
+
+@keyframes celebrate {
+  0%, 100% { transform: scale(1); }
+  35% { transform: scale(1.12) rotate(-3deg); }
+  70% { transform: scale(1.06) rotate(2deg); }
+}
+.celebrate { animation: celebrate 0.7s ease-in-out; }
