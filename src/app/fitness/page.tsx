@@ -5,10 +5,11 @@ import { todayStr, lastDays, pretty, weekIdOf, weekdayLetter, shiftDays, cx } fr
 import { buildPlan } from '@/lib/workouts'
 import { Ring } from '@/components/charts'
 import { Mascot } from '@/components/Mascot'
+import { Stickman } from '@/components/Stickman'
 import { useAuth, PageLoader } from '@/components/Providers'
 import Shell from '@/components/Shell'
 import { useDocs, useDoc, setAt, updateAt } from '@/lib/store'
-import type { StepLog, FitnessPlan, UserProfile } from '@/lib/types'
+import type { StepLog, FitnessPlan, PlanDay, UserProfile } from '@/lib/types'
 import {
   PageHeader, Card, CardTitle, Icon, Pill, Field, inputCls, btnGhost, ACCENTS, type IconName,
 } from '@/components/ui'
@@ -206,37 +207,9 @@ function Fitness() {
             }
           />
           <ul className="divide-y divide-line">
-            {Object.entries(plan.days).map(([date, day]) => {
-              const style = TYPE_STYLE[day.type]
-              const isToday = date === today
-              return (
-                <li key={date} className={cx('flex items-center gap-3 py-3', isToday && 'rounded-xl bg-cream/60 px-2 -mx-2')}>
-                  <button
-                    onClick={() => updateAt(uid, `fitnessPlans/${weekId}`, { [`days.${date}.done`]: !day.done })}
-                    aria-label={day.done ? 'Mark not done' : 'Mark done'}
-                    className={cx(
-                      'grid size-7 shrink-0 place-items-center rounded-full border transition-colors',
-                      day.done ? 'border-transparent bg-clay text-white' : 'border-line text-transparent hover:border-clay'
-                    )}
-                  >
-                    <Icon name="check" size={13} />
-                  </button>
-                  <span className="w-14 shrink-0 text-xs tabular-nums text-mist">
-                    {weekdayLetter(date)} {pretty(date).split(' ')[0]}
-                  </span>
-                  <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', style.badge)}>
-                    {style.label}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className={cx('block truncate text-sm font-medium', day.done && 'text-mist line-through')}>
-                      {day.title}
-                    </span>
-                    <span className="block truncate text-xs text-mist">{day.focus}</span>
-                  </span>
-                  {isToday && <Pill accent="clay">Today</Pill>}
-                </li>
-              )
-            })}
+            {Object.entries(plan.days).map(([date, day]) => (
+              <DayRow key={date} date={date} day={day} today={today} weekId={weekId} uid={uid} />
+            ))}
           </ul>
           <p className="mt-3 text-xs text-mist">
             New week, new choice — I’ll ask again on Monday. Steps goal stays daily.
@@ -244,5 +217,86 @@ function Fitness() {
         </Card>
       )}
     </div>
+  )
+}
+
+/* ================================================================== */
+
+function DayRow({
+  date, day, today, weekId, uid,
+}: {
+  date: string
+  day: PlanDay
+  today: string
+  weekId: string
+  uid: string
+}) {
+  const [open, setOpen] = useState(false)
+  const style = TYPE_STYLE[day.type]
+  const isToday = date === today
+  const hasGuide = (day.exercises?.length ?? 0) > 0
+
+  return (
+    <li className={cx('py-1', isToday && 'rounded-xl bg-cream/60 px-2 -mx-2')}>
+      <div className="flex items-center gap-3 py-2">
+        <button
+          onClick={() => updateAt(uid, `fitnessPlans/${weekId}`, { [`days.${date}.done`]: !day.done })}
+          aria-label={day.done ? 'Mark not done' : 'Mark done'}
+          className={cx(
+            'grid size-7 shrink-0 place-items-center rounded-full border transition-colors',
+            day.done ? 'border-transparent bg-clay text-white' : 'border-line text-transparent hover:border-clay'
+          )}
+        >
+          <Icon name="check" size={13} />
+        </button>
+        <span className="w-14 shrink-0 text-xs tabular-nums text-mist">
+          {weekdayLetter(date)} {pretty(date).split(' ')[0]}
+        </span>
+        <span className={cx('hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:inline', style.badge)}>
+          {style.label}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={cx('block truncate text-sm font-medium', day.done && 'text-mist line-through')}>
+            {day.title}
+          </span>
+          <span className="block truncate text-xs text-mist">{day.focus}</span>
+        </span>
+        {isToday && <Pill accent="clay">Today</Pill>}
+        {hasGuide && (
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label={open ? 'Hide exercise guide' : 'Show exercise guide'}
+            className={cx(
+              'grid size-8 shrink-0 place-items-center rounded-full border border-line text-mist transition-all hover:text-ink',
+              open && 'rotate-180 border-clay text-clay'
+            )}
+          >
+            <Icon name="chev-down" size={15} />
+          </button>
+        )}
+      </div>
+
+      {/* exercise guide with stickman diagrams */}
+      {open && hasGuide && (
+        <div className="rise-in grid gap-2 pb-3 sm:grid-cols-2">
+          {day.exercises!.map((e, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-2.5">
+              <span
+                className={cx(
+                  'grid size-14 shrink-0 place-items-center rounded-xl',
+                  day.type === 'gym' ? 'bg-sky-soft text-sky' : day.type === 'rest' ? 'bg-cream text-mist' : 'bg-sage-soft text-sage'
+                )}
+              >
+                <Stickman pose={e.pose} size={46} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">{e.name}</span>
+                <span className="block text-xs text-mist">{e.detail}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </li>
   )
 }

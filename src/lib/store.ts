@@ -6,7 +6,8 @@ import {
   onSnapshot, increment, type DocumentData,
 } from 'firebase/firestore'
 import { fb } from './firebase'
-import type { Doc } from './types'
+import { shiftDays } from './util'
+import type { Doc, Task } from './types'
 
 /* ---------------------------------------------------------------- */
 /* path helpers — everything lives under users/{uid}/...            */
@@ -139,8 +140,31 @@ export async function toggleHabitDoc(uid: string, habitId: string, date: string)
   else await setDoc(ref, { habitId, date })
 }
 
-export async function toggleTaskDoc(uid: string, taskId: string, done: boolean) {
-  await updateAt(uid, `tasks/${taskId}`, { done: !done, doneAt: !done ? Date.now() : null })
+export async function toggleTaskDoc(uid: string, task: Doc<Task>) {
+  const done = !task.done
+  await updateAt(uid, `tasks/${task.id}`, { done, doneAt: done ? Date.now() : null })
+  // recurring tasks live forever: completing one spawns the next occurrence
+  const recur = task.recur ?? 'none'
+  if (done && recur !== 'none' && task.due) {
+    await addTo(uid, 'tasks', {
+      title: task.title,
+      due: nextOccurrence(task.due, recur),
+      priority: task.priority,
+      recur,
+      done: false,
+      doneAt: null,
+      createdAt: Date.now(),
+    })
+  }
+}
+
+export function nextOccurrence(due: string, recur: 'daily' | 'weekdays' | 'weekly'): string {
+  if (recur === 'weekly') return shiftDays(due, 7)
+  let d = shiftDays(due, 1)
+  if (recur === 'weekdays') {
+    while ([0, 6].includes(new Date(d + 'T12:00:00').getDay())) d = shiftDays(d, 1)
+  }
+  return d
 }
 
 export async function saveMood(uid: string, date: string, mood: number) {

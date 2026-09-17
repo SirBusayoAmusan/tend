@@ -6,6 +6,8 @@ export interface IcsEvent {
   /** All-day date YYYY-MM-DD */
   date: string
   description?: string
+  /** Recurrence rule, e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR" */
+  rrule?: string
 }
 
 function esc(text: string): string {
@@ -38,6 +40,7 @@ export function buildIcs(events: IcsEvent[], calName = 'Tend — Life OS'): stri
       `DTEND;VALUE=DATE:${ymd(shiftDays(e.date, 1))}`,
       `SUMMARY:${esc(e.title)}`
     )
+    if (e.rrule) lines.push(`RRULE:${e.rrule}`)
     if (e.description) lines.push(`DESCRIPTION:${esc(e.description)}`)
     lines.push('END:VEVENT')
   }

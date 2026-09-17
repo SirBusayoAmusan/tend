@@ -165,7 +165,7 @@ export type IconName =
   | 'home' | 'leaf' | 'square-check' | 'target' | 'book' | 'heart' | 'wallet' | 'grad'
   | 'plus' | 'trash' | 'logout' | 'spark' | 'flame' | 'calendar' | 'check'
   | 'zap' | 'library' | 'briefcase' | 'upload' | 'download' | 'arrow-left' | 'arrow-right' | 'x'
-  | 'settings'
+  | 'settings' | 'menu' | 'repeat' | 'chev-down'
 
 const PATHS: Record<IconName, ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" />,
@@ -254,6 +254,16 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <circle cx="12" cy="12" r="3.2" />
       <path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8" />
+    </>
+  ),
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  'chev-down': <path d="m6 9 6 6 6-6" />,
+  repeat: (
+    <>
+      <path d="M17 2.5 21 6l-4 3.5" />
+      <path d="M3 11V9a3 3 0 0 1 3-3h15" />
+      <path d="m7 21.5-4-3.5L7 14.5" />
+      <path d="M21 13v2a3 3 0 0 1-3 3H3" />
     </>
   ),
 }

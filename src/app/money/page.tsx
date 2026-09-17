@@ -1,16 +1,25 @@
 'use client'
 
+import { useState } from 'react'
 import { todayStr, monthKey, pretty, money, cx } from '@/lib/util'
+import { buildInsights } from '@/lib/insights'
 import { useAuth, PageLoader } from '@/components/Providers'
 import Shell from '@/components/Shell'
-import { useDocs, addTo, removeAt } from '@/lib/store'
-import type { Txn } from '@/lib/types'
+import { useDocs, useDoc, setAt, addTo, removeAt } from '@/lib/store'
+import type { Txn, UserProfile } from '@/lib/types'
 import {
   PageHeader, Card, CardTitle, Icon, Pill, Field, inputCls, btnPrimary, Progress,
 } from '@/components/ui'
 
-const OUT_CATS = ['Food & dining', 'Transport', 'Home & bills', 'Health', 'Fun', 'Shopping', 'Family', 'Business', 'Other']
+const OUT_CATS = ['Food & dining', 'Groceries', 'Snacks & treats', 'Transport', 'Home & bills', 'Health', 'Fun', 'Shopping', 'Family', 'Business', 'Other']
 const IN_CATS = ['Salary', 'Side hustle', 'Business revenue', 'Gift', 'Refund', 'Other income']
+
+const TONE: Record<string, { border: string; icon: string }> = {
+  sage: { border: 'border-sage/40 bg-sage-soft/50', icon: 'check' },
+  sand: { border: 'border-sand/50 bg-sand-soft/60', icon: 'spark' },
+  rose: { border: 'border-rose/40 bg-rose-soft/60', icon: 'heart' },
+  sky: { border: 'border-sky/40 bg-sky-soft/60', icon: 'spark' },
+}
 
 export default function MoneyPage() {
   return (
@@ -25,8 +34,12 @@ function Money() {
   const today = todayStr()
   const m = monthKey(today)
   const txns = useDocs<Txn>(uid, 'txns')
-  if (txns === null) return <PageLoader />
+  const profile = useDoc<UserProfile>(uid, '')
+  const [kind, setKind] = useState<'out' | 'in'>('out')
 
+  if (txns === null || profile === undefined) return <PageLoader />
+
+  const treatsBudget = profile?.treatsBudget ?? 15000
   const monthTxns = txns.filter((t) => t.date.startsWith(m))
   const inn = monthTxns.filter((t) => t.kind === 'in').reduce((s, t) => s + t.amount, 0)
   const out = monthTxns.filter((t) => t.kind === 'out').reduce((s, t) => s + t.amount, 0)
@@ -43,76 +56,141 @@ function Money() {
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
     .slice(0, 20)
 
+  const insights = buildInsights(txns, treatsBudget)
+
   const addTxn = (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const [kind, category] = String(fd.get('category') || '').split('|')
-    if (kind !== 'in' && kind !== 'out') return
+    const fd = new FormData(form)
     const amount = Math.round(Number(fd.get('amount')) * 100) / 100
     if (!(amount > 0)) return
     void addTo(uid, 'txns', {
       date: String(fd.get('date') || today),
       kind,
       amount,
-      category: category || 'Other',
+      category: String(fd.get('category') || 'Other'),
       note: String(fd.get('note') || '').trim() || null,
       createdAt: Date.now(),
     })
-    e.currentTarget.reset()
+    form.reset()
+    setKind('out')
   }
 
   return (
     <div className="space-y-4">
       <PageHeader title="Money" sub="Attention is a currency too. Track both." />
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* summary */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
         {[
           { label: 'In this month', value: inn, cls: 'text-sage' },
           { label: 'Out this month', value: out, cls: 'text-rose' },
           { label: 'Net', value: inn - out, cls: 'text-ink' },
         ].map((s) => (
-          <Card key={s.label} className="!p-4 md:!p-5">
-            <p className="text-xs text-mist">{s.label}</p>
-            <p className={cx('mt-1 font-display text-xl tabular-nums md:text-2xl', s.cls)}>{money(s.value)}</p>
+          <Card key={s.label} className="!p-3.5 md:!p-5">
+            <p className="text-[11px] text-mist md:text-xs">{s.label}</p>
+            <p className={cx('mt-1 font-display text-lg tabular-nums md:text-2xl', s.cls)}>{money(s.value)}</p>
           </Card>
         ))}
       </div>
 
+      {/* add */}
       <Card>
         <CardTitle icon="plus" accent="sand" title="Log a transaction" />
-        <form onSubmit={addTxn} className="grid gap-3 md:grid-cols-[8rem_1fr_9.5rem_1fr_auto] md:items-end">
+        {/* kind toggle */}
+        <div className="mb-4 flex gap-1.5 rounded-full border border-line bg-cream/50 p-1 w-fit">
+          {(['out', 'in'] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={cx(
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                kind === k
+                  ? k === 'out' ? 'bg-rose-soft text-rose' : 'bg-sage-soft text-sage'
+                  : 'text-mist hover:text-ink'
+              )}
+            >
+              {k === 'out' ? 'Spending' : 'Income'}
+            </button>
+          ))}
+        </div>
+        <form key={kind} onSubmit={addTxn} className="grid gap-3 md:grid-cols-[8rem_1fr_9.5rem_1fr_auto] md:items-end">
           <Field label="Amount">
             <input type="number" name="amount" step="0.01" min="0" placeholder="5000" className={inputCls} />
           </Field>
           <Field label="Category">
-            <select name="category" className={inputCls} defaultValue="out|Food & dining">
-              <optgroup label="Spending">
-                {OUT_CATS.map((c) => (
-                  <option key={c} value={`out|${c}`}>{c}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Income">
-                {IN_CATS.map((c) => (
-                  <option key={c} value={`in|${c}`}>{c}</option>
-                ))}
-              </optgroup>
+            <select name="category" className={inputCls} defaultValue={kind === 'out' ? 'Food & dining' : 'Salary'}>
+              {(kind === 'out' ? OUT_CATS : IN_CATS).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
           </Field>
           <Field label="Date">
             <input type="date" name="date" defaultValue={today} max={today} className={inputCls} />
           </Field>
           <Field label="Note (optional)">
-            <input name="note" placeholder="e.g. Groceries at Spar" className={inputCls} />
+            <input name="note" placeholder={kind === 'out' ? 'e.g. Groceries at Spar' : 'e.g. October salary'} className={inputCls} />
           </Field>
           <button type="submit" className={btnPrimary}>
-            <Icon name="check" size={15} /> Log
+            <Icon name="check" size={15} /> Log {kind === 'out' ? 'expense' : 'income'}
           </button>
         </form>
       </Card>
 
+      {/* insights */}
+      <Card>
+        <CardTitle
+          icon="spark"
+          accent="lilac"
+          title="Where your money goes — and what to do better"
+          right={
+            <form
+              className="flex items-center gap-2 text-xs text-mist"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const n = Math.round(Number(new FormData(e.currentTarget).get('treatsBudget')))
+                if (n >= 1000) void setAt(uid, '', { treatsBudget: n })
+              }}
+            >
+              <span>Treats cap</span>
+              <input type="number" name="treatsBudget" defaultValue={treatsBudget} step={1000} className={cx(inputCls, 'w-24 !py-1 !px-2 text-xs')} />
+              <button className="rounded-full border border-line px-2.5 py-1 font-medium hover:border-mist/50 hover:text-ink">Set</button>
+            </form>
+          }
+        />
+        {insights.length === 0 ? (
+          <p className="text-sm text-mist">
+            Log a few transactions and Tend starts coaching: biggest slices, trends, weekend leaks,
+            and treats signals that also show up on your Health page.
+          </p>
+        ) : (
+          <div className="grid gap-2.5 md:grid-cols-2">
+            {insights.map((s) => {
+              const tone = TONE[s.tone]
+              return (
+                <div key={s.id} className={cx('rounded-2xl border p-4', tone.border)}>
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <Icon name={tone.icon as 'check'} size={14} className="shrink-0" />
+                    {s.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink/70">{s.body}</p>
+                  {s.health && (
+                    <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-ink/40">
+                      🔁 also shows in Health
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+        {/* spending by category */}
         <Card>
-          <CardTitle icon="wallet" accent="sand" title="Where it went this month" />
+          <CardTitle icon="wallet" accent="sand" title="This month by category" />
           {topCats.length === 0 ? (
             <p className="text-sm text-mist">No spending logged yet this month.</p>
           ) : (
@@ -130,10 +208,11 @@ function Money() {
           )}
         </Card>
 
+        {/* recent */}
         <Card>
           <CardTitle icon="calendar" accent="sky" title="Recent activity" />
           {recent.length === 0 ? (
-            <p className="text-sm text-mist">Nothing logged yet. Start with today’s spending.</p>
+            <p className="text-sm text-mist">Nothing logged yet. Start with today’s spending or this month’s income.</p>
           ) : (
             <ul className="space-y-1">
               {recent.map((t) => (

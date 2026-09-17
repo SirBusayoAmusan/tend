@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { set as idbSet, del as idbDel } from 'idb-keyval'
 import { uploadBookFile, deleteBookFile, estimateCloudBytes } from '@/lib/bookSync'
+import { countBookPages, paceLine } from '@/lib/pageCount'
 import { todayStr, cx } from '@/lib/util'
 import { useAuth, PageLoader } from '@/components/Providers'
 import Shell from '@/components/Shell'
@@ -85,6 +86,12 @@ function Library() {
 
     // local copy for instant/offline reading on this device
     void idbSet(`bookFile_${docRef.id}`, file).catch(() => {})
+
+    // count pages immediately so the 2-week pace math works before first open
+    void (async () => {
+      const totalPages = await countBookPages(file, format)
+      if (totalPages) await updateAt(uid, `books/${docRef.id}`, { totalPages })
+    })()
 
     // cloud copy through Firestore (free plan — no Storage engine needed)
     setUploading(0)
@@ -205,6 +212,7 @@ function Library() {
           {sorted.map((b) => {
             const acc = ACCENTS[coverAccent(b.title)]
             const todayPages = readingToday?.byBook?.[b.id] ?? 0
+            const pace = paceLine({ totalPages: b.totalPages, pct: b.pct, uploadedAt: b.uploadedAt, today })
             return (
               <Card key={b.id} className="flex flex-col !p-0 overflow-hidden">
                 {/* cover */}
@@ -233,9 +241,17 @@ function Library() {
                     <span className="tabular-nums">{b.pct}%</span>
                   </div>
                   <Progress value={b.pct} accent={coverAccent(b.title)} />
-                  {todayPages > 0 && (
-                    <p className="mt-1.5 text-xs text-sky">+{todayPages} pages today</p>
-                  )}
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
+                    {pace ? (
+                      <span className="text-mist">
+                        <Icon name="calendar" size={11} className="mr-1 inline text-sky" />
+                        {pace}
+                      </span>
+                    ) : (
+                      <span className="text-mist">{b.pct >= 100 ? 'Finished ✓' : '…'}</span>
+                    )}
+                    {todayPages > 0 && <span className="text-sky">+{todayPages} today</span>}
+                  </div>
                   <div className="mt-3 flex items-center gap-2">
                     <Link href={`/reader?book=${b.id}`} className={cx(btnPrimary, 'flex-1 !py-2 text-xs')}>
                       <Icon name="book" size={13} /> {b.pct > 0 ? 'Continue' : 'Start reading'}

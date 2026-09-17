@@ -267,7 +267,7 @@ function Dashboard() {
               {focusTasks.map((t) => (
                 <li key={t.id} className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-cream/60">
                   <button
-                    onClick={() => toggleTaskDoc(uid, t.id, t.done)}
+                    onClick={() => toggleTaskDoc(uid, t)}
                     aria-label={`Complete ${t.title}`}
                     className="grid size-6 place-items-center rounded-full border border-line text-transparent transition-colors hover:border-sky"
                   >
@@ -369,7 +369,10 @@ function Dashboard() {
           {course ? (
             <>
               <p className="truncate font-display text-lg">{course.title}</p>
-              <p className="mb-3 text-xs text-mist">{course.kind}{course.creator ? ` · ${course.creator}` : ''}</p>
+              <p className="mb-3 text-xs text-mist">
+                {course.kind}{course.creator ? ` · ${course.creator}` : ''}
+                {course.deadline && ` · due ${course.deadline}`}
+              </p>
               <Progress value={course.progress} accent="sage" />
               <p className="mt-1.5 text-xs tabular-nums text-mist">{course.progress}% complete</p>
             </>

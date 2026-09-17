@@ -6,6 +6,10 @@ export interface UserProfile {
   name: string
   stepsGoal: number
   pagesGoal: number
+  /** ISO weekdays with fasting: 1 = Mon … 7 = Sun. Default Mon/Wed/Fri. */
+  fastDays?: number[]
+  /** Monthly soft cap for treats/snacks spending (₦) — drives health signals. */
+  treatsBudget?: number
 }
 
 export interface Habit {
@@ -19,12 +23,15 @@ export interface HabitLog {
   date: string
 }
 
+export type TaskRecur = 'none' | 'daily' | 'weekdays' | 'weekly'
+
 export interface Task {
   title: string
   due: string | null // YYYY-MM-DD
   priority: number // 0 low · 1 normal · 2 high
   done: boolean
   doneAt: number | null // epoch ms
+  recur?: TaskRecur
   createdAt: number
 }
 
@@ -76,6 +83,8 @@ export interface LearnItem {
   progress: number
   done: boolean
   note: string | null
+  /** Target finish date (YYYY-MM-DD); defaults to +14 days. */
+  deadline: string | null
   createdAt: number
 }
 
@@ -108,11 +117,23 @@ export interface StepLog {
   count: number
 }
 
+/** Doc id = date. A scheduled fast day that was kept. */
+export interface FastLog {
+  kept: boolean
+}
+
+export interface PlanExercise {
+  name: string
+  pose: string // Stickman pose key
+  detail: string // e.g. "3×10–12, slow tempo"
+}
+
 export interface PlanDay {
   type: 'home' | 'gym' | 'rest'
   title: string
   focus: string
   done: boolean
+  exercises?: PlanExercise[]
 }
 
 /** Doc id = Monday of the week (YYYY-MM-DD). */
