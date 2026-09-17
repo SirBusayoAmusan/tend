@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
-    "postinstall": "prisma generate"
+    "serve": "npx serve out"
   },
   "dependencies": {
     "epubjs": "^0.3.93",

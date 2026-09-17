@@ -1,0 +1,5 @@
+# Tells Netlify exactly how to build & publish when your GitHub repo is connected.
+# Netlify auto-detects this file on import — nothing to configure in the UI.
+[build]
+  command = "npm run build"
+  publish = "out"
