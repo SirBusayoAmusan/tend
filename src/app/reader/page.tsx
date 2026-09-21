@@ -10,7 +10,7 @@ import { useAuth, PageLoader } from '@/components/Providers'
 import Shell from '@/components/Shell'
 import { useDoc, recordReading } from '@/lib/store'
 import type { Book, ReadingDaily, UserProfile } from '@/lib/types'
-import { Card, Icon, Pill, Progress, ACCENTS } from '@/components/ui'
+import { Icon, Pill } from '@/components/ui'
 
 export default function ReaderPage() {
   return (
@@ -35,12 +35,14 @@ function ReaderInner() {
   }
   if (book === null) {
     return (
-      <Card className="py-12 text-center">
-        <p className="font-display text-xl">This book isn’t on your shelf anymore.</p>
-        <Link href="/library" className="mt-3 inline-block text-sm font-medium text-sky hover:underline">
-          ← Back to Library
-        </Link>
-      </Card>
+      <div className="grid h-[100dvh] place-items-center bg-paper px-6 text-center">
+        <div>
+          <p className="font-display text-xl">This book isn’t on your shelf anymore.</p>
+          <Link href="/library" className="mt-3 inline-block text-sm font-medium text-sky hover:underline">
+            ← Back to Library
+          </Link>
+        </div>
+      </div>
     )
   }
   return (
@@ -71,6 +73,7 @@ function Reader({
   const [page, setPage] = useState(book.page ?? 1)
   const [totalPages, setTotalPages] = useState(book.totalPages ?? 0)
   const [flipClass, setFlipClass] = useState('')
+  const [chrome, setChrome] = useState(true)
 
   const bytesRef = useRef<ArrayBuffer | null>(null)
   const pdfRef = useRef<{ doc: any } | null>(null)
@@ -146,9 +149,9 @@ function Reader({
             color: '#2e2a26 !important',
             background: 'transparent !important',
             'font-family': 'Georgia, "Iowan Old Style", serif !important',
-            'line-height': '1.75 !important',
-            'font-size': '1.05em !important',
-            padding: '8px 4px !important',
+            'line-height': '1.8 !important',
+            'font-size': '1.08em !important',
+            padding: '4px 22px !important',
           },
           p: { 'margin-bottom': '0.9em !important' },
           'h1, h2, h3': { 'font-family': 'Georgia, serif !important', color: '#2e2a26 !important' },
@@ -277,111 +280,143 @@ function Reader({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') go('next')
       if (e.key === 'ArrowLeft') go('prev')
+      if (e.key === 'Escape') window.history.back()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [go])
 
-  /* tap zones: right 40% = next, left 40% = prev (Apple-Books-like) */
+  /* tap zones (Apple-Books-style): left = prev, center = toggle chrome, right = next */
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
     const frac = (e.clientX - box.left) / box.width
     if (frac > 0.62) go('next')
     else if (frac < 0.38) go('prev')
+    else setChrome((c) => !c)
   }
 
   const goalDone = pagesRead >= pagesGoal
   const pctText = totalPages > 0 ? Math.round((page / totalPages) * 100) : book.pct
 
   return (
-    <div className="mx-auto max-w-3xl">
-      {/* header */}
-      <div className="mb-3 flex items-center gap-3">
-        <Link
-          href="/library"
-          className="grid size-9 shrink-0 place-items-center rounded-full border border-line bg-white text-mist transition-colors hover:text-ink"
-          title="Back to Library"
+    <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-paper">
+      {/* ===== top chrome (overlay, fades on center tap) ===== */}
+      <header
+        className={cx(
+          'absolute inset-x-0 top-0 z-20 transition-all duration-300',
+          chrome ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-3 opacity-0'
+        )}
+      >
+        <div
+          className="border-b border-line bg-paper/90 backdrop-blur"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
         >
-          <Icon name="arrow-left" size={16} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate font-display text-lg">{book.title}</h1>
-          <p className="text-xs text-mist">
-            {book.author ?? book.format.toUpperCase()}
-            {totalPages > 0 && ` · page ${page} of ${totalPages} · ${pctText}%`}
-          </p>
+          <div className="mx-auto flex max-w-5xl items-center gap-2.5 px-3 py-2.5 sm:px-5 sm:py-3">
+            <Link
+              href="/library"
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-line bg-white text-mist transition-colors hover:text-ink"
+              title="Back to Library"
+            >
+              <Icon name="x" size={16} />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate font-display text-base sm:text-lg">{book.title}</h1>
+              <p className="truncate text-[11px] text-mist sm:text-xs">
+                {book.author ?? book.format.toUpperCase()}
+                {totalPages > 0 && ` · page ${page} of ${totalPages} · ${pctText}%`}
+              </p>
+            </div>
+            <Pill accent={goalDone ? 'sage' : 'sky'} className="shrink-0">
+              <Icon name="book" size={11} /> {pagesRead}/{pagesGoal}{goalDone ? ' ✓' : ''}
+            </Pill>
+          </div>
+          {/* hairline book progress */}
+          <div className="h-0.5 bg-cream">
+            <div className="h-full bg-sage transition-all duration-500" style={{ width: `${pctText}%` }} />
+          </div>
         </div>
-        <Pill accent={goalDone ? 'sage' : 'sky'} className="shrink-0">
-          <Icon name="book" size={11} /> {pagesRead}/{pagesGoal} today{goalDone ? ' ✓' : ''}
-        </Pill>
-      </div>
+      </header>
 
-      {/* progress toward daily goal */}
-      <div className={cx('mb-4', goalDone && 'celebrate')}>
-        <Progress value={Math.min(100, (pagesRead / pagesGoal) * 100)} accent="sky" />
-      </div>
-
-      {/* page surface */}
-      {status === 'loading' && <PageLoader line="Preparing your pages…" />}
-      {status === 'error' && (
-        <Card className="py-12 text-center">
-          <p className="font-display text-xl">Can’t open this book here</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-mist">{error}</p>
-          <Link href="/library" className="mt-4 inline-block text-sm font-medium text-sky hover:underline">
-            ← Back to Library
-          </Link>
-        </Card>
+      {/* ===== full-height reading surface ===== */}
+      {status === 'loading' && (
+        <div className="grid min-h-0 flex-1 place-items-center px-6">
+          <PageLoader line="Preparing your pages…" />
+        </div>
       )}
-      {status === 'ready' && (
-        <>
-          <div className="flip-stage">
+
+      {status === 'error' && (
+        <div className="grid min-h-0 flex-1 place-items-center px-6">
+          <div className="max-w-md rounded-3xl border border-line bg-white p-6 text-center">
+            <p className="font-display text-xl">Can’t open this book here</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-mist">{error}</p>
+            <Link href="/library" className="mt-4 inline-block text-sm font-medium text-sky hover:underline">
+              ← Back to Library
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {status === 'ready' && book.format === 'epub' && (
+        <div className="flex min-h-0 flex-1 flex-col pb-16 pt-14 sm:px-4 sm:pb-20 sm:pt-16 md:px-6">
+          <div className="flip-stage flex min-h-0 flex-1 flex-col">
             <div
-              ref={book.format === 'epub' ? pageBoxRef : undefined}
+              ref={pageBoxRef}
               onClick={onTap}
               className={cx(
-                'flip-leaf reader-paper relative min-h-[62vh] cursor-pointer select-none rounded-2xl border border-line',
-                flipClass,
-                book.format === 'epub' && 'h-[68vh] overflow-hidden'
+                'flip-leaf reader-paper relative h-full w-full cursor-pointer select-none overflow-hidden sm:mx-auto sm:max-w-3xl sm:rounded-2xl sm:border sm:border-line',
+                flipClass
               )}
-            >
-              {book.format === 'pdf' && (
-                <div className="p-3 md:p-5">
-                  <canvas ref={canvasRef} className="mx-auto rounded-md" />
-                </div>
-              )}
-            </div>
+            />
           </div>
-          {book.format === 'epub' && (
-            <p className="mt-2 text-center text-[11px] text-mist">
-              Tip: tap the left/right sides of the page (or use ← →) to flip
-            </p>
-          )}
-        </>
+        </div>
       )}
 
-      {/* bottom nav */}
-      {status === 'ready' && (
-        <div className="sticky bottom-4 mt-4 flex items-center justify-center gap-3">
-          <button
-            onClick={() => go('prev')}
-            disabled={book.format === 'pdf' && page <= 1}
-            className="grid size-11 place-items-center rounded-full border border-line bg-white text-mist shadow-sm transition-colors hover:text-ink disabled:opacity-40"
-            aria-label="Previous page"
+      {status === 'ready' && book.format === 'pdf' && (
+        <div className="flip-stage min-h-0 flex-1 overflow-y-auto overscroll-contain px-0 pb-24 pt-14 sm:px-6 sm:pt-20">
+          <div
+            onClick={onTap}
+            className={cx(
+              'flip-leaf reader-paper reader-paper-edgeless mx-auto max-w-5xl cursor-pointer select-none sm:rounded-2xl sm:border sm:border-line sm:p-3',
+              flipClass
+            )}
           >
-            <Icon name="arrow-left" size={17} />
-          </button>
-          <span className="rounded-full border border-line bg-white px-4 py-2.5 text-xs tabular-nums text-mist shadow-sm">
-            {totalPages > 0 ? `${page} / ${totalPages}` : '…'}
-          </span>
-          <button
-            onClick={() => go('next')}
-            disabled={book.format === 'pdf' && page >= totalPages}
-            className="grid size-11 place-items-center rounded-full bg-ink text-paper shadow-sm transition hover:opacity-90 disabled:opacity-40"
-            aria-label="Next page"
-          >
-            <Icon name="arrow-right" size={17} />
-          </button>
+            <canvas ref={canvasRef} className="mx-auto block h-auto w-full sm:rounded-md" />
+          </div>
         </div>
+      )}
+
+      {/* ===== bottom chrome (overlay) ===== */}
+      {status === 'ready' && (
+        <footer
+          className={cx(
+            'pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-1.5 px-4 transition-all duration-300',
+            chrome ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+          )}
+          style={{ paddingBottom: 'max(0.9rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-line bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
+            <button
+              onClick={() => go('prev')}
+              disabled={book.format === 'pdf' && page <= 1}
+              className="grid size-10 place-items-center rounded-full text-mist transition-colors hover:bg-cream hover:text-ink disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <Icon name="arrow-left" size={17} />
+            </button>
+            <span className="min-w-24 text-center text-xs tabular-nums text-mist">
+              {totalPages > 0 ? `${page} / ${totalPages} · ${pctText}%` : '…'}
+            </span>
+            <button
+              onClick={() => go('next')}
+              disabled={book.format === 'pdf' && page >= totalPages}
+              className="grid size-10 place-items-center rounded-full bg-ink text-paper transition hover:opacity-90 disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <Icon name="arrow-right" size={17} />
+            </button>
+          </div>
+          <p className="text-[10px] text-mist/80">tap edges to flip · tap center to {chrome ? 'hide' : 'show'} controls</p>
+        </footer>
       )}
     </div>
   )

@@ -47,7 +47,7 @@ export const btnGhost =
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx('rounded-3xl border border-line bg-white p-5 shadow-[0_1px_2px_rgba(46,42,38,0.04)] md:p-6', className)}>
+    <div className={cx('rounded-3xl border border-line bg-white p-4 shadow-[0_1px_2px_rgba(46,42,38,0.04)] sm:p-6', className)}>
       {children}
     </div>
   )

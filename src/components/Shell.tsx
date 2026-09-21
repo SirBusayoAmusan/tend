@@ -43,6 +43,9 @@ export default function Shell({ children }: { children: ReactNode }) {
 
   if (!user) return <PageLoader />
 
+  // Immersive full-screen routes (the book reader) render without app chrome
+  if (pathname?.startsWith('/reader')) return <>{children}</>
+
   const displayName = user.displayName?.trim() || user.email?.split('@')[0] || 'there'
 
   const logo = (
@@ -147,7 +150,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <main className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">{children}</main>
+        <main className="mx-auto w-full max-w-5xl px-4 pb-8 pt-5 sm:px-5 md:px-8 md:py-10">{children}</main>
       </div>
     </div>
   )
